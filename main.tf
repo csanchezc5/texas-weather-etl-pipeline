@@ -65,3 +65,25 @@ resource "aws_lambda_function" "texas_weather_lambda" {
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   timeout = 15
 }
+
+
+resource "aws_cloudwatch_event_rule" "texas_weather_schedule" {
+  name                = "texas-weather-hourly"
+  description         = "Executes Lamda for Texas weather every hour"
+  schedule_expression = "rate(24 hours)"
+}
+
+
+resource "aws_cloudwatch_event_target" "texas_weather_target" {
+  rule      = aws_cloudwatch_event_rule.texas_weather_schedule.name
+  target_id = "texas-weather-lambda"
+  arn       = aws_lambda_function.texas_weather_lambda.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.texas_weather_lambda.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.texas_weather_schedule.arn
+}
