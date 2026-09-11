@@ -87,5 +87,5 @@ Every 24 hours, a new record is added to the `TexasWeather` table with this form
 
 ## Author
 
-**Christian Sanchez** — Engineering student focused on Data & Cloud Engineering
+**Cristhian Sanchez** — Engineering student focused on Data & Cloud Engineering
 [GitHub](https://github.com/csanchezc5)
