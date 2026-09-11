@@ -1,91 +1,91 @@
 # Texas Weather ETL Pipeline
 
-Pipeline ETL serverless en AWS que extrae datos de clima en tiempo real para Texas desde la API pública de [Open-Meteo](https://open-meteo.com/), los procesa y los almacena de forma automática cada 24 horas. Toda la infraestructura está definida como código (IaC) con Terraform.
+A serverless ETL pipeline on AWS that extracts real-time weather data for Texas from the [Open-Meteo](https://open-meteo.com/) public API, processes it, and stores it automatically every 24 hours. The entire infrastructure is defined as code (IaC) using Terraform.
 
-## Arquitectura
+## Architecture
 
 ```
- EventBridge (cron, cada 24h)
+ EventBridge (cron, every 24h)
         │
         ▼
    AWS Lambda  ──────►  Open-Meteo API
- (Extract_Texas_Climate)   (clima actual)
+ (Extract_Texas_Climate)  (current weather)
         │
         ▼
    DynamoDB (TexasWeather)
 ```
 
-1. **Amazon EventBridge** dispara un evento programado cada 24 horas.
-2. **AWS Lambda** (`Extract_Texas_Climate`) se ejecuta, consulta la API de Open-Meteo para las coordenadas de Dallas, TX, y convierte la temperatura de Celsius a Fahrenheit.
-3. El resultado se guarda como un nuevo ítem en **Amazon DynamoDB** (tabla `TexasWeather`), con la fecha/hora como clave.
+1. **Amazon EventBridge** triggers a scheduled event every 24 hours.
+2. **AWS Lambda** (`Extract_Texas_Climate`) runs, queries the Open-Meteo API for Dallas, TX coordinates, and converts the temperature from Celsius to Fahrenheit.
+3. The result is saved as a new item in **Amazon DynamoDB** (`TexasWeather` table), using the timestamp as the key.
 
-## Stack técnico
+## Tech Stack
 
-| Componente | Servicio / Herramienta |
+| Component | Service / Tool |
 |---|---|
-| Infraestructura como código | Terraform |
-| Cómputo | AWS Lambda (Python 3.9) |
-| Base de datos | Amazon DynamoDB |
-| Orquestación / scheduling | Amazon EventBridge |
-| Permisos | IAM Role + Policies (`AWSLambdaBasicExecutionRole`, `AmazonDynamoDBFullAccess`) |
-| Fuente de datos | [Open-Meteo API](https://open-meteo.com/) (gratuita, sin API key) |
+| Infrastructure as Code | Terraform |
+| Compute | AWS Lambda (Python 3.9) |
+| Database | Amazon DynamoDB |
+| Orchestration / Scheduling | Amazon EventBridge |
+| Permissions | IAM Role + Policies (`AWSLambdaBasicExecutionRole`, `AmazonDynamoDBFullAccess`) |
+| Data Source | [Open-Meteo API](https://open-meteo.com/) (free, no API key required) |
 
-## Estructura del repositorio
+## Repository Structure
 
 ```
 .
-├── main.tf              # Definición de toda la infraestructura AWS
+├── main.tf              # Full AWS infrastructure definition
 ├── lambda_code/
-│   └── lambda_function.py   # Código de la función Lambda (extracción + transformación)
+│   └── lambda_function.py   # Lambda function code (extraction + transformation)
 ├── .gitignore
 └── README.md
 ```
 
-## Cómo desplegarlo
+## Deployment
 
-**Requisitos previos:**
-- Cuenta de AWS con credenciales configuradas (`aws configure`)
-- [Terraform](https://developer.hashicorp.com/terraform/downloads) instalado
-- Python 3.9 (solo si quieres probar la función localmente)
+**Prerequisites:**
+- AWS account with configured credentials (`aws configure`)
+- [Terraform](https://developer.hashicorp.com/terraform/downloads) installed
+- Python 3.9 (only needed to test the function locally)
 
-**Pasos:**
+**Steps:**
 
 ```bash
-# 1. Clonar el repositorio
+# 1. Clone the repository
 git clone https://github.com/csanchezc5/texas-weather-etl-pipeline.git
 cd texas-weather-etl-pipeline
 
-# 2. Inicializar Terraform
+# 2. Initialize Terraform
 terraform init
 
-# 3. Revisar el plan de ejecución
+# 3. Review the execution plan
 terraform plan
 
-# 4. Aplicar la infraestructura
+# 4. Apply the infrastructure
 terraform apply
 ```
 
-Esto crea automáticamente:
-- El rol IAM y sus políticas
-- La función Lambda (empaquetada desde `lambda_code/`)
-- La tabla DynamoDB
-- La regla de EventBridge y su permiso de invocación
+This automatically creates:
+- The IAM role and its policies
+- The Lambda function (packaged from `lambda_code/`)
+- The DynamoDB table
+- The EventBridge rule and its invocation permission
 
-## Resultado
+## Sample Output
 
-Cada 24 horas se agrega un nuevo registro a la tabla `TexasWeather` con este formato:
+Every 24 hours, a new record is added to the `TexasWeather` table with this format:
 
-| fecha | temperatura_c | temperatura_f |
+| fecha (timestamp) | temperatura_c | temperatura_f |
 |---|---|---|
 | 2026-09-11 09:53:27 | 26.7 | 80.06 |
 
-## Mejoras futuras
+## Future Improvements
 
-- Notebook de análisis con pandas para visualizar tendencias de temperatura a lo largo del tiempo
-- Alarmas de CloudWatch para notificar fallos en la ejecución de la Lambda
-- Manejo de reintentos ante fallos de la API externa
+- Pandas-based analysis notebook to visualize temperature trends over time
+- CloudWatch alarms to notify on Lambda execution failures
+- Retry logic to handle external API failures
 
-## Autor
+## Author
 
-**Christian Sanchez** — Estudiante de Ingeniería, enfocado en Data & Cloud Engineering
+**Christian Sanchez** — Engineering student focused on Data & Cloud Engineering
 [GitHub](https://github.com/csanchezc5)
