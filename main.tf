@@ -87,3 +87,63 @@ resource "aws_lambda_permission" "allow_eventbridge" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_event_rule.texas_weather_schedule.arn
 }
+
+
+data "archive_file" "lambda_reader_zip" {
+  type        = "zip"
+  source_dir  = "./lambda_code_reader"
+  output_path = "lambda_reader.zip"
+}
+
+
+resource "aws_lambda_function" "texas_weather_reader" {
+  filename         = data.archive_file.lambda_reader_zip.output_path
+  function_name    = "Read_Texas_Climate"
+  role             = aws_iam_role.iam_for_lambda.arn
+  handler          = "lambda_reader.lambda_handler"
+  runtime          = "python3.9"
+  timeout          = 15
+  source_code_hash = data.archive_file.lambda_reader_zip.output_base64sha256
+}
+
+
+resource "aws_apigatewayv2_api" "texas_weather_api" {
+  name          = "texas-weather-api"
+  protocol_type = "HTTP"
+}
+
+
+resource "aws_apigatewayv2_integration" "lambda_integration" {
+  api_id                 = aws_apigatewayv2_api.texas_weather_api.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.texas_weather_reader.invoke_arn
+  payload_format_version = "2.0"
+}
+
+
+resource "aws_apigatewayv2_route" "get_weather" {
+  api_id    = aws_apigatewayv2_api.texas_weather_api.id
+  route_key = "GET /weather"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
+
+resource "aws_apigatewayv2_stage" "default" {
+  api_id      = aws_apigatewayv2_api.texas_weather_api.id
+  name        = "$default"
+  auto_deploy = true
+}
+
+
+resource "aws_lambda_permission" "allow_apigateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.texas_weather_reader.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.texas_weather_api.execution_arn}/*/*"
+}
+
+
+output "api_endpoint" {
+  value = "${aws_apigatewayv2_stage.default.invoke_url}/weather"
+}
